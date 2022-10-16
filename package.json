@@ -1,0 +1,14 @@
+{
+  "type": "module",
+  "bin": {
+    "make-groups": "./make-groups.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "ky": "^0.31.4",
+    "ramda": "^0.28.0"
+  },
+  "devDependencies": {
+    "node-fetch": "^3.2.10"
+  }
+}
