@@ -35,7 +35,7 @@ export const getEnvVar = (envVar) => {
   const value = process.env[envVar];
   if (!value) {
     console.error(
-      `Missing ${envVar} env var. Add it to .env or set when running this command`
+      `Missing ${envVar} env var. Add it to .env or set when running this command.`
     );
     process.exit(1);
   } else {

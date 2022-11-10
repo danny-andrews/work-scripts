@@ -4,8 +4,10 @@
     "make-groups": "./make-groups.js"
   },
   "dependencies": {
+    "chalk": "^5.1.2",
     "dotenv": "^16.0.3",
     "ky": "^0.31.4",
+    "minimist": "^1.2.7",
     "ramda": "^0.28.0"
   },
   "devDependencies": {
