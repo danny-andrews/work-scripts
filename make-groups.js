@@ -1,11 +1,24 @@
 #!/usr/bin/env node
 import { shuffle, partition, readJSONFile } from "./shared.js";
-import { pipe, map, join } from "ramda";
+import { pipe, map, join, difference, __ } from "ramda";
+import minimist from "minimist";
 
-const [, , groupSize] = process.argv;
+const args = minimist(process.argv.slice(2), {
+  string: ["exclude"],
+});
+
+const exclude = args.exclude ? args.exclude.split(",") : [];
+
+const [groupSize] = args._;
 
 const format = pipe(map(join(" - ")), join("\n"));
 
 readJSONFile("./students.json").then(
-  pipe(shuffle, partition(groupSize || 2), format, console.log)
+  pipe(
+    difference(__, exclude),
+    shuffle,
+    partition(groupSize || 2),
+    format,
+    console.log
+  )
 );
