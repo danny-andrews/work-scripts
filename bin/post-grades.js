@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-import "./fetch-polyfill.js";
+import "../src/fetch-polyfill.js";
 import ky, { HTTPError } from "ky";
 import dotenv from "dotenv";
 import chalk from "chalk";
-import { readJSONFile, difference, getEnvVar } from "./shared.js";
+import { readJSONFile, difference, getEnvVar } from "../src/shared.js";
 import minimist from "minimist";
+
 dotenv.config();
 
 const GRADE_WARNING_THRESHOLD = 0.7;
@@ -63,7 +64,7 @@ const makeAsanaRequest = (
         );
       } else if (status === 429) {
         throw new InternalError(
-          "Got Rate-limited by Asana. Wait a minute before running again."
+          "Got rate-limited by Asana. Wait a minute before running again."
         );
       } else {
         throw err;
@@ -90,7 +91,7 @@ const getAssessmentGrades = () =>
   readJSONFile("./grades.json")
     .catch(() => {
       throw new InternalError(
-        'Could not read Learn grades file. Ensure grades are downloaded to "./grades.json."'
+        'Could not read Learn grades file. Ensure grades are downloaded to "./data/grades.json."'
       );
     })
     .then((grades) =>
@@ -156,7 +157,7 @@ Promise.all([getTasks(), getAssessmentGrades()])
 
     const taskIds = new Map(tasks.map((task) => [task.name, task.gid]));
 
-    if(isDryRun) return Promise.resolve()
+    if (isDryRun) return Promise.resolve();
 
     return Promise.all(
       grades

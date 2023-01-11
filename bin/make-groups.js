@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { shuffle, partition, readJSONFile } from "./shared.js";
+import { shuffle, partition, getStudents } from "../src/shared.js";
 import { pipe, map, join, difference, __ } from "ramda";
 import minimist from "minimist";
 
@@ -13,8 +13,9 @@ const [groupSize] = args._;
 
 const format = pipe(map(join(" - ")), join("\n"));
 
-readJSONFile("./students.json").then(
+getStudents().then(
   pipe(
+    map((a) => a.name),
     difference(__, exclude),
     shuffle,
     partition(groupSize || 2),
