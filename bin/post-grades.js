@@ -1,16 +1,20 @@
 #!/usr/bin/env node
 import "../src/fetch-polyfill.js";
-import ky, { HTTPError } from "ky";
 import dotenv from "dotenv";
 import chalk from "chalk";
-import { readJSONFile, difference, getEnvVar } from "../src/shared.js";
+import {
+  readJSONFile,
+  difference,
+  getEnvVar,
+  AsanaClient,
+  InternalError,
+  formatScore,
+} from "../src/shared.js";
 import minimist from "minimist";
 
 dotenv.config();
 
 const GRADE_WARNING_THRESHOLD = 0.7;
-
-class InternalError extends Error {}
 
 const printError = (message) => {
   console.error(chalk.red(`Error: ${message}`));
@@ -34,61 +38,12 @@ if (!assessmentName) {
   process.exit(1);
 }
 
+const asanaClient = AsanaClient(asanaToken);
+
 const isDryRun = Boolean(args["dry-run"]);
 
-/* Effects */
-const makeAsanaRequest = (
-  path,
-  { headers, data, method = "GET", ...options } = {}
-) =>
-  ky(`https://app.asana.com/api/1.0${path}`, {
-    headers: {
-      Authorization: `Bearer ${asanaToken}`,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...headers,
-    },
-    method,
-    ...(method !== "GET" ? { json: { data } } : {}),
-    ...options,
-  })
-    .then((res) => res.json())
-    .then((res) => res.data)
-    .catch((err) => {
-      if (!(err instanceof HTTPError)) throw err;
-      const { status } = err.response;
-
-      if (status === 401) {
-        throw new InternalError(
-          "Could not authorize with Asana API. Ensure your Personal Access Token is correct."
-        );
-      } else if (status === 429) {
-        throw new InternalError(
-          "Got rate-limited by Asana. Wait a minute before running again."
-        );
-      } else {
-        throw err;
-      }
-    });
-
-const getTasks = () =>
-  makeAsanaRequest(
-    `/projects/${asanaProjectId}/tasks?opt_fields=custom_fields`
-  ).catch((err) => {
-    if (!(err instanceof HTTPError)) throw err;
-    const { status } = err.response;
-
-    if (status === 404) {
-      throw new InternalError(
-        "Could not find Asana project. Double-check your Asana project id."
-      );
-    } else {
-      throw err;
-    }
-  });
-
 const getAssessmentGrades = () =>
-  readJSONFile("./grades.json")
+  readJSONFile(new URL("../data/grades.json", import.meta.url))
     .catch(() => {
       throw new InternalError(
         'Could not read Learn grades file. Ensure grades are downloaded to "./data/grades.json."'
@@ -105,22 +60,9 @@ const getAssessmentGrades = () =>
         .filter((grade) => grade.assessmentName === assessmentName)
     );
 
-const formatScore = (score) => `${Math.round(score * 100)}%`;
-
-const createSubtask = (taskId, grade) => {
-  const { assessmentName, score } = grade;
-
-  return makeAsanaRequest(`/tasks/${taskId}/subtasks`, {
-    data: {
-      name: `[ASSESSMENT]: ${assessmentName} - ${formatScore(score)}`,
-    },
-    method: "POST",
-  });
-};
-
 /* Main */
-Promise.all([getTasks(), getAssessmentGrades()])
-  .then(([tasks, grades]) => {
+Promise.all([asanaClient.getStudents(asanaProjectId), getAssessmentGrades()])
+  .then(([students, grades]) => {
     if (grades.length === 0) {
       throw new InternalError(
         `No grades found for assessment "${assessmentName}." Ensure assessment name matches those in Learn.`
@@ -141,8 +83,8 @@ Promise.all([getTasks(), getAssessmentGrades()])
       }
     });
 
-    const learnStudents = new Set(grades.map((grade) => grade.studentName));
-    const asanaStudents = new Set(tasks.map((task) => task.name));
+    const learnStudents = new Set(grades.map((grade) => grade.email));
+    const asanaStudents = new Set(students.map((task) => task.email));
 
     difference(asanaStudents, learnStudents).forEach((name) => {
       printWarning(
@@ -155,16 +97,29 @@ Promise.all([getTasks(), getAssessmentGrades()])
       );
     });
 
-    const taskIds = new Map(tasks.map((task) => [task.name, task.gid]));
+    const taskIds = new Map(students.map((task) => [task.name, task.gid]));
 
-    if (isDryRun) return Promise.resolve();
+    const gradesToPost = grades.filter(
+      (grade) => taskIds.has(grade.studentName) && grade.score !== null
+    );
+
+    if (isDryRun) {
+      console.log("The following Asana subtasks would be posted:");
+      grades.forEach(({ assessmentName, studentName, score }) => {
+        console.log(
+          '%s -> "[Assessment - %s]: %s"',
+          studentName,
+          assessmentName,
+          formatScore(score)
+        );
+      });
+      return Promise.resolve();
+    }
 
     return Promise.all(
-      grades
-        .filter(
-          (grade) => taskIds.has(grade.studentName) && grade.score !== null
-        )
-        .map((grade) => createSubtask(taskIds.get(grade.studentName), grade))
+      gradesToPost.map((grade) =>
+        asanaClient.postAssessmentGrade(taskIds.get(grade.studentName), grade)
+      )
     );
   })
   .catch((err) => {

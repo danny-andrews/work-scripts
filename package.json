@@ -1,9 +1,10 @@
 {
   "name": "mcsp-scripts",
+  "version": "0.0.1",
   "type": "module",
   "bin": {
-    "make-groups": "./make-groups.js",
-    "post-grades": "./post-grades.js"
+    "make-groups": "./bin/make-groups.js",
+    "post-grades": "./bin/post-grades.js"
   },
   "dependencies": {
     "chalk": "^5.1.2",
