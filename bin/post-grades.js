@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 import chalk from "chalk";
 import {
   readJSONFile,
-  difference,
   getEnvVar,
   AsanaClient,
   InternalError,
@@ -16,12 +15,16 @@ dotenv.config();
 
 const GRADE_WARNING_THRESHOLD = 0.7;
 
-const printError = (message) => {
+const error = (message) => {
   console.error(chalk.red(`Error: ${message}`));
 };
 
-const printWarning = (message) => {
+const warn = (message) => {
   console.warn(chalk.yellow(`Warning: ${message}`));
+};
+
+const info = (message) => {
+  console.info(chalk.green(message));
 };
 
 const args = minimist(process.argv.slice(2), {
@@ -33,7 +36,7 @@ const asanaProjectId = getEnvVar("ASANA_PROJECT_ID");
 const [assessmentName] = args._;
 
 if (!assessmentName) {
-  printError("Missing assessmentName parameter.");
+  error("Missing assessmentName parameter.");
   console.log("\n$ ./post-grades.js [assessmentName]");
   process.exit(1);
 }
@@ -69,64 +72,70 @@ Promise.all([asanaClient.getStudents(asanaProjectId), getAssessmentGrades()])
       );
     }
 
-    grades.forEach(({ score, studentName }) => {
-      if (score === null) {
-        printWarning(
-          `No score found for "${studentName}." Grades will not be posted for this student`
-        );
-      } else if (score < GRADE_WARNING_THRESHOLD) {
-        printWarning(
-          `"${studentName}" scored below a ${formatScore(
-            GRADE_WARNING_THRESHOLD
-          )} (${formatScore(score)}).`
-        );
-      }
-    });
-
-    const learnStudents = new Set(grades.map((grade) => grade.email));
-    const asanaStudents = new Set(students.map((task) => task.email));
-
-    difference(asanaStudents, learnStudents).forEach((name) => {
-      printWarning(
-        `"${name}" was found in Asana but not in Learn grades file.`
-      );
-    });
-    difference(learnStudents, asanaStudents).forEach((name) => {
-      printWarning(
-        `"${name}" was found in Learn grades but not in Asana. Grades will not be posted for this student.`
-      );
-    });
-
-    const taskIds = new Map(students.map((task) => [task.name, task.gid]));
-
-    const gradesToPost = grades.filter(
-      (grade) => taskIds.has(grade.studentName) && grade.score !== null
+    const studentMap = new Map(
+      students.map((student) => [student.email, student])
     );
+    const gradeMap = new Map(grades.map((grade) => [grade.email, grade]));
+
+    const filteredGrades = [...gradeMap.values()]
+      .filter(({ studentName, score }) => {
+        if (score === null) {
+          warn(
+            `No score found for "${studentName}." Have they taken the assessment?"`
+          );
+          return false;
+        }
+
+        return true;
+      })
+      .map((grade) => {
+        const { score, studentName } = grade;
+        if (score < GRADE_WARNING_THRESHOLD) {
+          warn(
+            `"${studentName}" scored below a ${formatScore(
+              GRADE_WARNING_THRESHOLD
+            )} (${formatScore(score)}).`
+          );
+        }
+
+        return grade;
+      })
+      .filter(({ email, studentName }) => {
+        if (!studentMap.has(email)) {
+          warn(`${studentName} (${email}) was not found in Asana.`);
+          return false;
+        }
+
+        return true;
+      })
+      .map(({ email, score, assessmentName, studentName }) => ({
+        gid: studentMap.get(email).gid,
+        score,
+        assessmentName,
+        studentName,
+      }))
+      .sort((a, b) => b.score - a.score);
 
     if (isDryRun) {
-      console.log("The following Asana subtasks would be posted:");
-      grades.forEach(({ assessmentName, studentName, score }) => {
-        console.log(
-          '%s -> "[Assessment - %s]: %s"',
-          studentName,
-          assessmentName,
-          formatScore(score)
-        );
+      info("\nInfo: Without --dry-run, the following grades will be posted:\n");
+      filteredGrades.forEach(({ assessmentName, studentName, score }) => {
+        info(`${studentName} -> ${assessmentName} - ${formatScore(score)}`);
       });
+
       return Promise.resolve();
     }
 
     return Promise.all(
-      gradesToPost.map((grade) =>
-        asanaClient.postAssessmentGrade(taskIds.get(grade.studentName), grade)
+      filteredGrades.map(({ gid, assessmentName, score }) =>
+        asanaClient.postAssessmentGrade(gid, assessmentName, score)
       )
     );
   })
   .catch((err) => {
     if (err instanceof InternalError) {
-      printError(err.message);
+      error(err.message);
     } else {
-      printError(err);
+      console.error(err);
     }
     process.exit(1);
   });

@@ -88,9 +88,7 @@ export const AsanaClient = (asanaToken) => {
         }
       });
 
-  const postAssessmentGrade = (taskId, grade) => {
-    const { assessmentName, score } = grade;
-
+  const postAssessmentGrade = (taskId, assessmentName, score) => {
     return makeRequest(`/tasks/${taskId}/subtasks`, {
       data: {
         name: `[Assessment - ${assessmentName}]: ${formatScore(score)}`,
