@@ -11,7 +11,6 @@
     "command-line-args": "^5.2.1",
     "dotenv": "^16.0.3",
     "ky": "^0.31.4",
-    "minimist": "^1.2.7",
     "node-fetch": "^3.2.10",
     "ramda": "^0.28.0"
   }

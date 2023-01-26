@@ -5,13 +5,13 @@ import { pipe, map, join, difference, __ } from "ramda";
 
 const format = pipe(map(join(" - ")), join("\n"));
 
-export default ([groupSize = 2], { exclude }) => {
+export default ([size = 2], { exclude }) => {
   return readStudents().then(
     pipe(
       map((a) => a.name),
       difference(__, exclude),
       shuffle,
-      partition(groupSize),
+      partition(size),
       format,
       console.log
     )

@@ -83,7 +83,7 @@ if (!subcommand) {
 const {
   positional = [],
   _unknown: unknown,
-  ...rest
+  ...named
 } = cla(subcommand.options, {
   argv: process.argv.slice(3),
   partial: true,
@@ -98,7 +98,7 @@ if (unknown) {
 }
 
 try {
-  await subcommand.handler(positional, rest);
+  await subcommand.handler(positional, named);
 } catch (err) {
   if (!(err instanceof InternalError)) throw err;
 
