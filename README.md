@@ -10,17 +10,19 @@ You can install these scripts in three steps:
 1. `$ cd mcsp-scripts`
 1. `$ npm link` - Installs the package, and adds the `mcsp` script as a global binary.
 
-> Note: To ensure the last step worked, you can run `npm list --global` and make sure `mcsp-scripts` is listed in the output. You can also run `npm bin --global` to find the directory where global binaries are installed (default is `~/.npm-global/bin`).
+> **Note**: To ensure the last step worked, you can run `npm list --global` and make sure `mcsp-scripts` is listed in the output.
+>
+> You can also run `npm bin --global` to find the directory where global binaries are installed (default is `~/.npm-global/bin`).
 
 If for any reason you needed to uninstall this package, run `npm uninstall --global mcsp-scripts`.
 
 ## Setup
 
-Most commands require access to your cohort's Asana board, to either retrieve student information or to post new subtasks. Because of this, you need to create a PAT. You can do so [here](https://app.asana.com/0/my-apps).
+Most commands require access to your cohort's Asana board. Because of this, you need to create a PAT. You can do so [here](https://app.asana.com/0/my-apps).
 
 Once you have your PAT, copy `.env.template` to `.env` and assign your PAT to `ASANA_TOKEN` and add your `ASANA_PROJECT_ID` as well. (This can be found in the URL when viewing an Asana board.)
 
-Everything in `.env` can also be passed as an environment variable when running commands, if preferred.
+> **Note**: Everything in `.env` can also be passed as an environment variable when running commands, if preferred.
 
 ## Commands
 
