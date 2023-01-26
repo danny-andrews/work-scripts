@@ -2,12 +2,13 @@
   "name": "mcsp-scripts",
   "version": "0.0.1",
   "type": "module",
+  "private": true,
   "bin": {
-    "make-groups": "./bin/make-groups.js",
-    "post-grades": "./bin/post-grades.js"
+    "mcsp": "./src/cli.js"
   },
   "dependencies": {
     "chalk": "^5.1.2",
+    "command-line-args": "^5.2.1",
     "dotenv": "^16.0.3",
     "ky": "^0.31.4",
     "minimist": "^1.2.7",

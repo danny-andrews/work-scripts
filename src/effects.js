@@ -1,55 +1,16 @@
-import { readFile } from "node:fs/promises";
-import { curryN } from "ramda";
+import { readFile, writeFile } from "node:fs/promises";
 import ky, { HTTPError } from "ky";
+import { InternalError } from "./util.js";
 
-const div = (x, y) => Math.floor(x / y);
-
-export const shuffle = (array) => {
-  let i = array.length - 1;
-
-  while (i > 0) {
-    const randIndex = Math.floor(Math.random() * (i + 1));
-    [array[i], array[randIndex]] = [array[randIndex], array[i]];
-    i--;
-  }
-
-  return array;
-};
-
-export const partition = curryN(2, (size, items) => {
-  const result = [];
-
-  items.forEach((item, i) => {
-    (result[div(i, size)] ||= []).push(item);
-  });
-
-  return result;
-});
+const rel = (path) => new URL(path, import.meta.url);
 
 export const readJSONFile = (filepath) =>
   readFile(filepath, "utf-8").then((file) => JSON.parse(file));
 
-export const getStudents = () =>
-  readJSONFile(new URL("../data/students.json", import.meta.url));
+export const readStudents = () => readJSONFile(rel("../data/students.json"));
 
-export const difference = (setA, setB) =>
-  new Set([...setA].filter((element) => !setB.has(element)));
-
-export const getEnvVar = (envVar) => {
-  const value = process.env[envVar];
-  if (!value) {
-    console.error(
-      `Missing ${envVar} environment variable. Add it to .env or set when running this command.`
-    );
-    process.exit(1);
-  } else {
-    return value;
-  }
-};
-
-export class InternalError extends Error {}
-
-export const formatScore = (score) => `${Math.round(score * 100)}%`;
+export const writeStudents = (students) =>
+  writeFile(rel("../data/students.json"), JSON.stringify(students, null, 2));
 
 const EMAIL_CUSTOM_FIELD_GID = "1203266261019373";
 
@@ -88,10 +49,10 @@ export const AsanaClient = (asanaToken) => {
         }
       });
 
-  const postAssessmentGrade = (taskId, assessmentName, score) => {
+  const postAssessmentGrade = (taskId, assessment, score) => {
     return makeRequest(`/tasks/${taskId}/subtasks`, {
       data: {
-        name: `[Assessment - ${assessmentName}]: ${formatScore(score)}`,
+        name: `[Assessment - ${assessment}]: ${formatScore(score)}`,
       },
       method: "POST",
     });
@@ -128,3 +89,19 @@ export const AsanaClient = (asanaToken) => {
 
   return { postAssessmentGrade, getStudents };
 };
+
+export const getGrades = () =>
+  readJSONFile(rel("../data/grades.json"))
+    .catch(() => {
+      throw new InternalError(
+        'Could not read Learn grades file. Ensure grades are downloaded to "./data/grades.json."'
+      );
+    })
+    .then((grades) =>
+      grades.map((grade) => ({
+        assessmentName: grade["Standard Title"],
+        score: grade.score,
+        studentName: grade["Full Name"],
+        email: grade["Email"],
+      }))
+    );
