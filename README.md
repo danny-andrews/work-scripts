@@ -46,7 +46,7 @@ Downloads student information from Asana and writes it to `data/students.json`.
 
 Reads Learn grades file and creates subtasks for each student with grades on their assessments. It will also warn you if anyone scores below a 70%, or if a student has no grade on file for the given assessment.
 
-At the time of writing, there is no programmatic way to pull grades from Learn, but you can get a dump of all student grades by going to `https://learn-2.galvanize.com/cohorts/[COHORT_ID]/custom_reports`, clicking the "Assessment Dashboard" link, scrolling down to the second card, and downloading the json dump to `data/grades.json`.
+At the time of writing, there is no programmatic way to pull grades from Learn, but you can get a dump of all student grades by navigating to the assessment in Learn, clicking the "Report" icon, clicking "Download student summary CSV," and downloading them to `data/grades.csv`.
 
 ![Screenshot](images/assessment-download.png)
 
