@@ -42,4 +42,4 @@ export const difference = (setA, setB) =>
 
 export class InternalError extends Error {}
 
-export const formatScore = (score) => `${Math.round(score * 100)}%`;
+export const formatScore = (score) => `${score}%`;

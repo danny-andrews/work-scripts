@@ -1,11 +1,15 @@
 import { readFile, writeFile } from "node:fs/promises";
 import ky, { HTTPError } from "ky";
 import { InternalError } from "./util.js";
+import { parse } from "csv-parse/sync";
 
 const rel = (path) => new URL(path, import.meta.url);
 
 export const readJSONFile = (filepath) =>
   readFile(filepath, "utf-8").then((file) => JSON.parse(file));
+
+export const readCSVFile = (filepath) =>
+  readFile(filepath, "utf-8").then((file) => parse(file, { columns: true }));
 
 export const readStudents = () => readJSONFile(rel("../data/students.json"));
 
@@ -52,7 +56,7 @@ export const AsanaClient = (asanaToken) => {
   const postAssessmentGrade = (taskId, assessment, score) => {
     return makeRequest(`/tasks/${taskId}/subtasks`, {
       data: {
-        name: `[Assessment - ${assessment}]: ${formatScore(score)}`,
+        name: `[Assessment: ${assessment}] - ${formatScore(score)}`,
       },
       method: "POST",
     });
@@ -90,18 +94,16 @@ export const AsanaClient = (asanaToken) => {
   return { postAssessmentGrade, getStudents };
 };
 
-export const getGrades = () =>
-  readJSONFile(rel("../data/grades.json"))
-    .catch(() => {
-      throw new InternalError(
-        'Could not read Learn grades file. Ensure grades are downloaded to "./data/grades.json."'
-      );
-    })
-    .then((grades) =>
-      grades.map((grade) => ({
-        assessmentName: grade["Standard Title"],
-        score: grade.score,
-        studentName: grade["Full Name"],
-        email: grade["Email"],
-      }))
+export const getGrades = async () => {
+  const grades = await readCSVFile(rel("../data/grades.csv")).catch(() => {
+    throw new InternalError(
+      'Could not read Learn grades file. Ensure grades are downloaded to "./data/grades.csv."'
     );
+  });
+
+  return grades.map((grade) => ({
+    score: Number(grade.score_percentage),
+    fullName: [grade.first_name, grade.last_name].join(" "),
+    email: grade.email,
+  }));
+};
